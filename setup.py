@@ -7,7 +7,7 @@ An extension for Sentry which implements an S3 NodeStorage backend
 from setuptools import setup
 
 install_requires = [
-    'boto>=2.38.0',
+    'boto3',
     'sentry>=7.4.0',
 ]
 

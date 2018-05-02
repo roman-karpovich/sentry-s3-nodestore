@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import json
 from time import sleep
 
-import boto
+import boto3
 
 from sentry.nodestore.base import NodeStorage
 
@@ -26,38 +26,18 @@ def retry(attempts, func, *args, **kwargs):
     raise
 
 
-def connect_s3(bucket_name, region=None, validate=False,
-               aws_access_key_id=None, aws_secret_access_key=None):
-    if region is None:
-        conn = boto.connect_s3(aws_access_key_id=aws_access_key_id,
-                               aws_secret_access_key=aws_secret_access_key)
-    else:
-        conn = boto.s3.connect_to_region(region,
-                                         aws_access_key_id=aws_access_key_id,
-                                         aws_secret_access_key=aws_secret_access_key)
-    return conn.get_bucket(bucket_name, validate=validate)
-
-
 class S3NodeStorage(NodeStorage):
 
-    def __init__(self, bucket_name=None, region=None, max_retries=3,
-                 aws_access_key_id=None, aws_secret_access_key=None):
+    def __init__(self, bucket_name=None, max_retries=3):
         self.max_retries = max_retries
-        self.bucket = connect_s3(bucket_name, region=region,
-                                 aws_access_key_id=aws_access_key_id,
-                                 aws_secret_access_key=aws_secret_access_key)
-
-    def _put(self, node_id, data):
-        key = boto.s3.key.Key(self.bucket)
-        key.key = node_id
-        retry(self.max_retries, key.set_contents_from_string, *(data,))
-        return node_id
+        self.bucket_name = bucket_name
+        self.client = boto3.client('s3')
 
     def delete(self, id):
         """
         >>> nodestore.delete('key1')
         """
-        self.bucket.delete_key(id)
+        self.client.delete_object(Bucket=self.bucket_name, Key=id)
 
     def delete_multi(self, id_list):
         """
@@ -68,7 +48,9 @@ class S3NodeStorage(NodeStorage):
 
         >>> delete_multi(['key1', 'key2'])
         """
-        self.bucket.delete_keys(id_list)
+        self.client.delete_object(Bucket=self.bucket_name, Delete={
+            'Objects': [{'Key': id} for id in id_list]
+        })
 
     def get(self, id):
         """
@@ -78,43 +60,11 @@ class S3NodeStorage(NodeStorage):
         key = self.bucket.get_key(id)
         if key is None:
             return None
-        result = retry(self.max_retries, key.get_contents_as_string)
+        result = retry(self.max_retries, self.client.get_object, Bucket=self.bucket_name, Key=id)
         return json.loads(result)
-
-    def get_multi(self, id_list):
-        """
-        >>> data_map = nodestore.get_multi(['key1', 'key2')
-        >>> print 'key1', data_map['key1']
-        >>> print 'key2', data_map['key2']
-        """
-        return dict(
-            (id, self.get(id))
-            for id in id_list
-        )
-
-    def create(self, data):
-        """
-        >>> nodestore.create({'foo': 'bar'})
-        """
-        node_id = self.generate_id()
-        self._put(node_id, json.dumps(data))
-        return node_id
 
     def set(self, id, data):
         """
         >>> nodestore.set('key1', {'foo': 'bar'})
         """
-        self._put(id, json.dumps(data))
-
-    def set_multi(self, values):
-        """
-        >>> nodestore.set_multi({
-        >>>     'key1': {'foo': 'bar'},
-        >>>     'key2': {'foo': 'baz'},
-        >>> })
-        """
-        for id, data in values.iteritems():
-            self.set(id=id, data=data)
-
-    def cleanup(self, cutoff_timestamp):
-        raise NotImplementedError
+        retry(self.max_retries, self.client.put_object, Body=data, Bucket=self.bucket_name, Key=id)
