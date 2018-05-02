@@ -8,6 +8,7 @@ from setuptools import setup
 
 install_requires = [
     'boto3',
+    'simplejson',
     'sentry>=7.4.0',
 ]
 

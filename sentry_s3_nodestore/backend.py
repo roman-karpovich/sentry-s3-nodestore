@@ -8,9 +8,10 @@ sentry_s3_nodestore.backend
 
 from __future__ import absolute_import
 
-import json
 from base64 import urlsafe_b64encode
 from time import sleep
+import simplejson
+import uuid4
 
 import boto3
 
@@ -59,13 +60,13 @@ class S3NodeStorage(NodeStorage):
         >>> print data
         """
         result = retry(self.max_retries, self.client.get_object, Bucket=self.bucket_name, Key=id)
-        return json.loads(result)
+        return simplejson.loads(result)
 
     def set(self, id, data):
         """
         >>> nodestore.set('key1', {'foo': 'bar'})
         """
-        data = json.dumps(data)
+        data = simplejson.dumps(data)
         retry(self.max_retries, self.client.put_object, Body=data, Bucket=self.bucket_name, Key=id)
 
     def generate_id(self):
