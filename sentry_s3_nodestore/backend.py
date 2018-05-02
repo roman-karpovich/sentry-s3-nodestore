@@ -8,10 +8,10 @@ sentry_s3_nodestore.backend
 
 from __future__ import absolute_import
 
+import simplejson
 from base64 import urlsafe_b64encode
 from time import sleep
-import simplejson
-import uuid4
+from uuid import uuid4
 
 import boto3
 
