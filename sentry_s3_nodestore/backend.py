@@ -50,7 +50,7 @@ class S3NodeStorage(NodeStorage):
 
         >>> delete_multi(['key1', 'key2'])
         """
-        self.client.delete_object(Bucket=self.bucket_name, Delete={
+        self.client.delete_objects(Bucket=self.bucket_name, Delete={
             'Objects': [{'Key': id} for id in id_list]
         })
 
