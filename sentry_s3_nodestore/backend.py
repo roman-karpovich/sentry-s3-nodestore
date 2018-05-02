@@ -60,7 +60,7 @@ class S3NodeStorage(NodeStorage):
         >>> print data
         """
         result = retry(self.max_retries, self.client.get_object, Bucket=self.bucket_name, Key=id)
-        return simplejson.loads(result)
+        return simplejson.loads(result['Body'].read())
 
     def set(self, id, data):
         """
