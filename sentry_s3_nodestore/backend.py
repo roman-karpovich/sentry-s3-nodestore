@@ -67,4 +67,5 @@ class S3NodeStorage(NodeStorage):
         """
         >>> nodestore.set('key1', {'foo': 'bar'})
         """
+        data = json.dumps(data)
         retry(self.max_retries, self.client.put_object, Body=data, Bucket=self.bucket_name, Key=id)
