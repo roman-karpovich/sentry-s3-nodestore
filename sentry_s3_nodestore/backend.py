@@ -28,10 +28,10 @@ def retry(attempts, func, *args, **kwargs):
 
 class S3NodeStorage(NodeStorage):
 
-    def __init__(self, bucket_name=None, max_retries=3):
+    def __init__(self, bucket_name=None, region='eu-west-1', max_retries=3):
         self.max_retries = max_retries
         self.bucket_name = bucket_name
-        self.client = boto3.client('s3')
+        self.client = boto3.client('s3', region)
 
     def delete(self, id):
         """
